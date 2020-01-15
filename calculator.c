@@ -32,10 +32,10 @@ int main(){
 void data(char *term, double *num){
     char *buff = (char *) malloc(1024);
     char *endptr;
-    int sign = 1;
     while(1){
         char dummy;
         int set = 0;
+        int sign = 1;
         fprintf (stdout, "\nEnter %s number: ", term);
         fgets(buff, 1024, stdin);
         while((dummy = *(buff + set)) == ' '){ set++; }
