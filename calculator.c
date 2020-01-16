@@ -39,7 +39,8 @@ void data(char *term, double *num){
         fprintf (stdout, "\nEnter %s number: ", term);
         fgets(buff, 1024, stdin);
         while((dummy = *(buff + set)) == ' '){ set++; }
-        if (*(buff + set) == '-'){ sign = -1; set++; }
+        if (*(buff + set) == '-'){ sign *= -1; set++; }
+        while((dummy = *(buff + set)) == ' '){ set++; }
         if (isdigit(*(buff + set))){
             *num = sign * strtod(buff + set, &endptr);
             break;
