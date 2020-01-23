@@ -61,6 +61,7 @@ int main()
         //for exiting
         if(isalpha(*(buff + set))){
             if (strcmp(buff + set, "quit")){ break; }
+            printf ("\nInvalid value please follow the instruction\n");
         }
 
         //for numbers
@@ -77,13 +78,13 @@ int main()
             //get operation function address
             funoperator opp = operator[(int)*(buff + set)];
             //check for valid function operator
-            if(opp == NULL){ printf ("\nInvalid operator"); }
+            if(opp == NULL){ printf ("\nInvalid operator\n"); }
             else{
                 //find the two values from node
                 long double num1, num2; 
                 node *prev = curr->prev;
                 //check for first node
-                if(prev == NULL){ printf ("\nCannot operate on single function"); }
+                if(prev == NULL){ printf ("\nCannot operate on single function\n"); }
                 else{
                     node *temp = curr->prev;
                     num1 = prev->value;
@@ -150,7 +151,7 @@ void display(node *curr)
         temp = temp2;
     }
     while(1){
-        printf ("%Lf\n", temp->value);
+        printf ("%Lg\n", temp->value);
         if(temp++ == curr){ break; } 
     }
     return;
