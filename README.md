@@ -6,4 +6,4 @@ open for suggestions
 
 FILES AVAILABLE 
   1. calculator.c => A basic calculator only for arithmetic calculations only (uses CUI) 
-  2. rpn.c* => (Reverse Polish Notation) calculator has only basic arithmetic (uses CUI)
+  2. rpn.c => (Reverse Polish Notation) calculator has only basic arithmetic (uses CUI)
