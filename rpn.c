@@ -13,64 +13,88 @@ typedef struct _node{
 node *create();
 
 //responsible for initializing node
-node *input(long double, node *);
+node *input(long double x, node *);
 
 //resposible for computing
 typedef long double (*funoperator) (long double, long double);
-long double add(long double, long double);
-long double sub(long double, long double);
-long double prd(long double, long double);
-long double divd(long double, long double);
-funoperator (*operator[128]) (long double, long double) = { NULL };
+long double add(long double x, long double y);
+long double sub(long double x, long double y);
+long double prd(long double x, long double y);
+long double divd(long double x, long double y);
+long double (*operator[128]) (long double, long double);
 void initializeOperatorArray();
 
 //responsible for removing nodes
 void del(node *);
 
 //responsible for displaying current status of nodes
-void display(node *);
+void display(node *, int);
 
 int main()
 {
     //initializing variables
-    int set, sign;
+    int set, sign, cursor, flag, flag1, total = 0;
     long double num;
     char *buff = calloc(1, 1024);
     if (buff == NULL){ exit(1); }
     char dummy;
+    char *test = calloc(1, 5);
     node *curr = NULL;
     initializeOperatorArray();
 
     //welcome message
     printf ("\n\nWelcome to RPN (Reverse Polish Notation) calculator!!\n");
     printf ("\nYou may enter only either number or operation (currently: + - * /) per input\n");
-    printf ("to exit enter : quit\n\n");
+    printf ("\nto remove the last value enter : del \nto exit enter : quit\n\n");
 
     //start of calculation
     while (1){
         //resetting
         set = 0;
         sign = 1;
+        cursor = 0;
+        flag = 1;
+        flag1 = 1;
+        *test = '\0';
 
         //taking data
-        printf ("Data: ");
+        printf ("\nData: ");
         scanf(" ");
         fgets(buff, 1024, stdin);
         while ((dummy = *(buff + set)) == ' '){ set++; };
         
         //for exiting
-        if(isalpha(*(buff + set))){
-            if (strcmp(buff + set, "quit")){ break; }
-            printf ("\nInvalid value please follow the instruction\n");
+        while(isalpha(*(buff + set + cursor))){
+            *(test + cursor) = *(buff + set + cursor);
+            cursor++;
+            *(test + cursor) = '\0';
+            if(!strcmp(test, "quit")){ flag1 = 0; flag = 0; }
+            if(!strcmp(test, "del")){ 
+                flag1 = 0; 
+                if(curr != NULL){
+                    node *temp = curr->prev;
+                    del(curr);
+                    curr = temp;
+                    total--;
+                }
+                else{
+                    printf ("\nCan't delete anymore\n");
+                }
+             }
+            if(cursor == 4){ break; }
         }
+        set += cursor;
+        if(!flag){ break; }
+        if(*test != '\0' && flag1){ printf ("\nInvalid value please follow the instruction\n"); }
 
         //for numbers
-        if(*(buff + set) == '-'){ sign *= -1; }
+        if(*(buff + set) == '-'){ sign *= -1; set++; }
         while ((dummy = *(buff + set)) == ' '){ set++; };
         if(isdigit(*(buff + set))){
-            num = strtold(buff, NULL) * sign;
+            num = sign * strtold(buff + set, NULL);
             node *temp = input(num, curr);
             curr = temp;
+            total++;
         }
 
         //for operations
@@ -89,18 +113,24 @@ int main()
                     node *temp = curr->prev;
                     num1 = prev->value;
                     num2 = curr->value;
+                    if (num2 == 0 && opp == divd){ 
+                        printf ("\nCan't divide by zero\n"); 
+                        goto next; 
+                    }
                     prev->value = opp(num1, num2);
                     del(curr);
                     curr = temp;
+                    total--; 
+                    
                 }
             }
         }
 
-        if(curr != NULL){ display(curr); }
+        next: if(curr != NULL){ display(curr, total); }
     }
 
     //goodbye message
-    printf ("\n\n Good Bye !! \n\n");
+    printf ("\n\nGood Bye !! \n\n");
 
     return 0;
 }
@@ -141,18 +171,21 @@ void del(node *remove)
 }
 
 //responsible for displaying current status of nodes
-void display(node *curr)
+void display(node *curr, int total)
 {
-    node *temp = calloc(1, sizeof(node)), *temp2 = calloc(1, sizeof(node));
-    temp = curr;
-    while (1){
-        if(temp->prev == NULL){ break; }
-        temp2 = temp->prev;
-        temp = temp2;
-    }
-    while(1){
-        printf ("%Lg\n", temp->value);
-        if(temp++ == curr){ break; } 
+    int set = 0;
+    node **table = calloc(total, sizeof(node *));
+    if(curr != NULL){
+        while(1){
+            table[set] = curr;
+            if(curr->prev == NULL){ break; }
+            curr = curr->prev;
+            set++;
+        }
+        printf ("Table of current values: \n");
+        for( ; set >= 0; set--){
+            printf ("\t%Lg\n", table[set]->value);
+        }
     }
     return;
 }
