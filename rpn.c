@@ -88,7 +88,7 @@ int main()
         if(*test != '\0' && flag1){ printf ("\nInvalid value please follow the instruction\n"); }
 
         //for numbers
-        if(*(buff + set) == '-'){ sign *= -1; set++; }
+        if(*(buff + set) == '-' && isdigit(*(buff + set + 1))){ sign *= -1; set++; }
         while ((dummy = *(buff + set)) == ' '){ set++; };
         if(isdigit(*(buff + set))){
             num = sign * strtold(buff + set, NULL);
@@ -108,7 +108,7 @@ int main()
                 long double num1, num2; 
                 node *prev = curr->prev;
                 //check for first node
-                if(prev == NULL){ printf ("\nCannot operate on single function\n"); }
+                if(prev == NULL){ printf ("\nCannot operate on single number\n"); }
                 else{
                     node *temp = curr->prev;
                     num1 = prev->value;
