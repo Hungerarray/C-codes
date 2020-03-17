@@ -13,22 +13,21 @@ int main ()
 
     int len = strlen(text);
     char curr_max[len];
-    unsigned count, count1, curr_max_len = 0, max_len = 0;
+    int count, count1, curr_max_len = 0, max_len = 0, max_strt = 0, max_end = 0;
 
     for (count = 0; count < len; count++){
         for (count1 = len - 1; count1 >= count; count1--){
-            printf ("\ncount: %d | count1: %d", count, count1);
-            break;
                 if(palin(text, count, count1)){
                     max_len = count1 - count;
                     if(curr_max_len == 0 || curr_max_len < max_len){ 
                         curr_max_len = max_len;
-                        copy(curr_max, text, count1, count); 
-                        printf ("%s", curr_max);    
+                        max_strt = count;
+                        max_end = count1;
                     }
                 }
         }
     }
+    copy(curr_max, text, max_strt, max_end);
     printf (" %s", curr_max);
     
     return 0;
