@@ -11,9 +11,7 @@ int main ()
 
     printf ("\nEnter any text: ");
     fgets(text, 1023, stdin);
-    int cursor = 0;
-    while(*(text + cursor) != '\n'){ cursor++; }
-    *(text + cursor) = '\0';
+    *(text + strlen(text) - 1) = '\0';
 
     int len = strlen(text);
     char curr_max[len];
