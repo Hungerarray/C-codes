@@ -1,15 +1,19 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int palin(char [], int, int);
 void copy(char [], const char dummy[], int, int);
 
 int main ()
 {
-    char text[100];
+    char *text = (char *) calloc(1024, sizeof(char));
 
     printf ("\nEnter any text: ");
-    scanf (" %s", text);
+    fgets(text, 1023, stdin);
+    int cursor = 0;
+    while(*(text + cursor) != '\n'){ cursor++; }
+    *(text + cursor) = '\0';
 
     int len = strlen(text);
     char curr_max[len];
