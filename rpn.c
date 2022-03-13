@@ -1,191 +1,333 @@
+#define _GNU_SOURCE
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
+#include <regex.h>
+#include <assert.h>
 
-//value storing node
-typedef struct _node{
-    struct _node *prev;
-    long double value;
-}node;
+// Input struct
+typedef enum InputState_t { NUMBER, OPERAND, DISPLAY, DELETE, EXIT, INVALID } InputState_t;
 
-//responsible for creating the node
-node *create();
+typedef struct Input_t {
+  InputState_t state;
+  union {
+    double value;
+    char operand;
+  };
+} Input_t;
 
-//responsible for initializing node
-node *input(long double x, node *);
+// Double linked list
+typedef struct Node_t {
+  double value;
+  struct Node_t *prev, *next;
+} Node_t;
 
-//resposible for computing
-typedef long double (*funoperator) (long double, long double);
-long double add(long double x, long double y);
-long double sub(long double x, long double y);
-long double prd(long double x, long double y);
-long double divd(long double x, long double y);
-long double (*operator[128]) (long double, long double);
-void initializeOperatorArray();
+typedef struct List_t {
+  Node_t *head, *tail;
+  uintmax_t count;
+} List_t;
 
-//responsible for removing nodes
-void del(node *);
+// Helper functions
+Node_t *createNode(double value) {
+  Node_t *ret = (Node_t *) malloc(sizeof(Node_t));
+  assert(ret);
+  *ret = (Node_t) {
+    .value = value
+  };
+  return ret;
+};
 
-//responsible for displaying current status of nodes
-void display(node *, int);
-
-int main()
-{
-    //initializing variables
-    int set, sign, cursor, flag, flag1, total = 0;
-    long double num;
-    char *buff = calloc(1, 1024);
-    if (buff == NULL){ exit(1); }
-    char dummy;
-    char *test = calloc(1, 5);
-    node *curr = NULL;
-    initializeOperatorArray();
-
-    //welcome message
-    printf ("\n\nWelcome to RPN (Reverse Polish Notation) calculator!!\n");
-    printf ("\nYou may enter only either number or operation (currently: + - * /) per input\n");
-    printf ("\nto remove the last value enter : del \nto exit enter : quit\n\n");
-
-    //start of calculation
-    while (1){
-        //resetting
-        set = 0;
-        sign = 1;
-        cursor = 0;
-        flag = 1;
-        flag1 = 1;
-        *test = '\0';
-
-        //taking data
-        printf ("\nData: ");
-        scanf(" ");
-        fgets(buff, 1024, stdin);
-        while ((dummy = *(buff + set)) == ' '){ set++; };
-        
-        //for exiting
-        while(isalpha(*(buff + set + cursor))){
-            *(test + cursor) = *(buff + set + cursor);
-            cursor++;
-            *(test + cursor) = '\0';
-            if(!strcmp(test, "quit")){ flag1 = 0; flag = 0; }
-            if(!strcmp(test, "del")){ 
-                flag1 = 0; 
-                if(curr != NULL){
-                    node *temp = curr->prev;
-                    del(curr);
-                    curr = temp;
-                    total--;
-                }
-                else{
-                    printf ("\nCan't delete anymore\n");
-                }
-             }
-            if(cursor == 4){ break; }
-        }
-        set += cursor;
-        if(!flag){ break; }
-        if(*test != '\0' && flag1){ printf ("\nInvalid value please follow the instruction\n"); }
-
-        //for numbers
-        if(*(buff + set) == '-' && isdigit(*(buff + set + 1))){ sign *= -1; set++; }
-        while ((dummy = *(buff + set)) == ' '){ set++; };
-        if(isdigit(*(buff + set))){
-            num = sign * strtold(buff + set, NULL);
-            node *temp = input(num, curr);
-            curr = temp;
-            total++;
-        }
-
-        //for operations
-        else if (ispunct((int)*(buff + set))){
-            //get operation function address
-            funoperator opp = operator[(int)*(buff + set)];
-            //check for valid function operator
-            if(opp == NULL){ printf ("\nInvalid operator\n"); }
-            else{
-                //find the two values from node
-                long double num1, num2; 
-                node *prev = curr->prev;
-                //check for first node
-                if(prev == NULL){ printf ("\nCannot operate on single number\n"); }
-                else{
-                    node *temp = curr->prev;
-                    num1 = prev->value;
-                    num2 = curr->value;
-                    if (num2 == 0 && opp == divd){ 
-                        printf ("\nCan't divide by zero\n"); 
-                        goto next; 
-                    }
-                    prev->value = opp(num1, num2);
-                    del(curr);
-                    curr = temp;
-                    total--; 
-                    
-                }
-            }
-        }
-
-        next: if(curr != NULL){ display(curr, total); }
-    }
-
-    //goodbye message
-    printf ("\n\nGood Bye !! \n\n");
-
-    return 0;
+void deleteNode(Node_t *node) {
+  free(node);
 }
 
-//responsible for creating the node
-node *create(){
-    node *temp = (node *)calloc(1, sizeof(node));
-    if(temp == NULL){ exit(1); }
-    return temp;
+void pushList(List_t *list, Node_t *node) {
+  if(list->count == 0) {
+    *list = (List_t) {
+      .head = node,
+      .tail = node,
+      .count = 1
+    };
+    return ;
+  }
+
+  list->tail->next = node;
+  node->prev = list->tail;
+  list->tail = node;
+  list->count++;
 }
 
-//responsible for initializing node
-node *input(long double num, node *prev)
-{
-    node *curr = create();
-    curr->prev = prev;
-    curr->value = num;
+Node_t *popList(List_t *list) {
+  if (list->count == 0) {
+    return NULL;
+  }
+  else if (list->count == 1) {
+    Node_t *curr = list->tail;
+    *list = (List_t){};
     return curr;
+  }
+
+  Node_t *curr = list->tail;
+  list->tail = curr->prev;
+  list->tail->next = NULL;
+  list->count--;
+  
+  return curr;
 }
 
-//resposible for computing
-long double add(long double a, long double b){ return a + b; }
-long double sub(long double a, long double b){ return a - b; }
-long double prd(long double a, long double b){ return a * b; }
-long double divd(long double a, long double b){ return a / b; }
-void initializeOperatorArray(){
-    operator['+'] = add;
-    operator['-'] = sub;
-    operator['*'] = prd;
-    operator['/'] = divd;
+void displayNode(const Node_t *node) {
+  printf("\t%g\n", node->value);
 }
 
-//respomsible for removing nodes
-void del(node *remove)
-{
-    free(remove);
-    return;
+void displayList(const List_t *list) {
+  printf ("Table of current values: \n");
+  for(Node_t *curr = list->head; curr != NULL; curr = curr->next) {
+    displayNode(curr);
+  }
 }
 
-//responsible for displaying current status of nodes
-void display(node *curr, int total)
-{
-    int set = 0;
-    node **table = calloc(total, sizeof(node *));
-    if(curr != NULL){
-        while(1){
-            table[set] = curr;
-            if(curr->prev == NULL){ break; }
-            curr = curr->prev;
-            set++;
-        }
-        printf ("Table of current values: \n");
-        for( ; set >= 0; set--){
-            printf ("\t%Lg\n", table[set]->value);
-        }
+// computational functions
+double add(double x, double y) {
+  return x + y;
+}
+double sub(double x, double y) {
+  return x - y;
+}
+double mult(double x, double y) {
+  return x * y;
+}
+double divd(double x, double y) {
+  return x / y;
+}
+
+void operation(List_t *list, char operand) {
+  if(list->count < 2) {
+    printf("Not enough numbers to perform operation on.\n");
+    return ;
+  }
+
+  Node_t *curr = popList(list);
+  Node_t *prev = popList(list);
+  double total;
+  switch(operand) {
+    case '+':
+      total = add(prev->value, curr->value);
+      pushList(list, createNode(total));
+      break;
+    case '-':
+      total = sub(prev->value, curr->value);
+      pushList(list, createNode(total));
+      break;
+    case '*':
+      total = mult(prev->value, curr->value);
+      pushList(list, createNode(total)); 
+      break;
+    case '/':
+      if(curr->value == 0) {
+        printf("Math Error: division by zero");
+        pushList(list, prev);
+        pushList(list, curr);
+        return ;
+      }
+      total = divd(prev->value, curr->value);
+      pushList(list, createNode(total));
+      break;
+    default:
+      pushList(list, prev);
+      pushList(list, curr);
+      printf("Invalid operand\n");
+      return ;
+  }
+
+  free(prev);
+  free(curr);
+}
+
+void operate(Input_t input) {
+  static List_t list;
+
+  switch(input.state) {
+    case NUMBER:
+      Node_t *newValue = createNode(input.value);
+      pushList(&list, newValue);
+      break;
+    case DELETE:
+      if(list.count == 0) {
+        printf("No more elements!!\n");
+        break;
+      }
+      popList(&list);
+      break;
+    case INVALID:
+      printf("Invalid operation \n");
+      break;
+    case DISPLAY:
+      displayList(&list);
+      break;
+    case OPERAND:
+      operation(&list, input.operand);
+      break;
+    default:
+      printf("Invalid State\n");
+      break;
+  }
+}
+
+void printRegError(int errcode, const regex_t *regex) {
+  size_t total = regerror(errcode, regex, NULL, 0) + 1;
+  char buffer[total];
+  regerror(errcode, regex, buffer, total);
+  printf("%s\n", buffer);
+}
+
+bool isNumber(const char *input) {
+  static regex_t numReg;
+  static bool compiled = false;
+  static const char *regex = "^\\s*[+-]?([0-9]+\\.?[0-9]*|\\.[0-9]+)\\s*$";
+
+  if(!compiled) {
+    int err = regcomp(&numReg, regex, REG_EXTENDED);
+    if(err) {
+      printRegError(err, &numReg);
     }
-    return;
+    assert(err == 0);
+  } 
+  return regexec(&numReg, input, 0, NULL, 0) == 0;
+}
+
+bool isOperand(const char *input) {
+  static regex_t operandReg;
+  static bool compiled = false;
+  static const char *regex = "^\\s*[+*/-]\\s*$";
+
+  if(!compiled) {
+    int err = regcomp(&operandReg, regex, REG_EXTENDED);
+    if(err) {
+      printRegError(err, &operandReg);
+    }
+    assert(err == 0);
+  } 
+  return regexec(&operandReg, input, 0, NULL, 0) == 0;
+}
+
+bool isDisplay(const char *input) {
+  static regex_t displayReg;
+  static bool compiled = false;
+  static const char *regex = "^\\s*display\\s*$";
+
+  if(!compiled) {
+    int err = regcomp(&displayReg, regex, REG_EXTENDED | REG_ICASE);
+    if(err) {
+      printRegError(err, &displayReg);
+    }
+    assert(err == 0);
+  } 
+  return regexec(&displayReg, input, 0, NULL, 0) == 0;
+}
+
+bool isDelete(const char *input) {
+  static regex_t deleteReg;
+  static bool compiled = false;
+  static const char *regex = "^\\s*delete\\s*$";
+
+  if(!compiled) {
+    int err = regcomp(&deleteReg, regex, REG_EXTENDED | REG_ICASE);
+    if(err) {
+      printRegError(err, &deleteReg);
+    }
+    assert(err == 0);
+  } 
+  return regexec(&deleteReg, input, 0, NULL, 0) == 0;
+}
+
+bool isExit(const char *input) {
+  static regex_t exitReg;
+  static bool compiled = false;
+  static const char *regex = "^\\s*exit\\s*$";
+
+  if(!compiled) {
+    int err = regcomp(&exitReg, regex, REG_EXTENDED | REG_ICASE);
+    if(err) {
+      printRegError(err, &exitReg);
+    }
+    assert(err == 0);
+  } 
+  return regexec(&exitReg, input, 0, NULL, 0) == 0;
+}
+
+char getOperand(const char *input) {
+  char curr;
+  const char *temp = input;
+  do {
+    curr = *(temp++);
+  }while(isspace(curr));
+  return curr;
+}
+
+Input_t getInput() {
+  char *userInput = NULL;
+  size_t len;
+  getline(&userInput, &len, stdin);
+
+  Input_t ret;
+  if(isNumber(userInput)) {
+    ret = (Input_t) {
+      .state = NUMBER,
+      .value = strtod(userInput, NULL)
+    };
+  } else if (isOperand(userInput)) {
+    ret = (Input_t) {
+      .state = OPERAND,
+      .operand = getOperand(userInput)
+     };
+  } else if (isDisplay(userInput)) {
+    ret = (Input_t) {
+      .state = DISPLAY
+    };
+  } else if (isDelete(userInput)) {
+    ret = (Input_t) {
+      .state = DELETE
+    };
+  } else if (isExit(userInput)) {
+    ret = (Input_t) {
+      .state = EXIT
+    };
+  } else {
+    ret = (Input_t) {
+      .state = INVALID
+    };
+  }
+  
+  free(userInput);
+  return ret;
+}
+
+void printMenu() {
+  printf("Your input\n");
+  printf("\t1. Number\n");
+  printf("\t2. Operand (+,-,*,/)\n");
+  printf("\t3. <display>, to display the current stack layout\n");
+  printf("\t4. <delete>, to delete previous number\n");
+  printf("\t5. <exit>, to quit the program\n");
+}
+
+void mainLoop() {
+  while(true) {
+    printMenu();
+    Input_t inp = getInput();
+    if(inp.state == EXIT) {
+      break;
+    }
+    operate(inp);
+  }
+}
+
+int main() {
+  printf ("\n\nWelcome to RPN (Reverse Polish Notation) calculator!!\n");
+  mainLoop(); 
+  printf ("\n\nGood Bye !! \n\n");
+  return EXIT_SUCCESS;
 }
